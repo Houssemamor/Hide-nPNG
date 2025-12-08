@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" author="Shadow Knight" >
+    <title>Hide'nPNG - Steganography Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            margin-bottom: -2px;
+        }
+
+        .tab-button:hover {
+            color: #667eea;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px 20px;
+            background: #f5f5f5;
+            border: 2px dashed #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #667eea;
+        }
+
+        .file-input-label:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #e8f4f8;
+            border-left: 3px solid #667eea;
+            color: #333;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .file-name.show {
+            display: block;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button[type="submit"]:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button[type="submit"]:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .info-box {
+            background: #e8f4f8;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .info-box h3 {
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+
+        .info-box p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .capacity-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .capacity-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .capacity-item .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .capacity-item .label {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        footer {
+            background: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .capacity-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Hide'nPNG</h1>
+            <p>Hide secret documents in images using steganography</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('hide')">Hide Document</button>
+            <button class="tab-button" onclick="switchTab('extract')">Extract Document</button>
+            <button class="tab-button" onclick="switchTab('info')">Info & Help</button>
+        </div>
+
+        <div class="content">
+            <!-- Hide Tab -->
+            <div id="hide" class="tab-content active">
+                <div class="info-box">
+                    <h3>How to Hide</h3>
+                    <p>1. Select a PNG or BMP image as the cover</p>
+                    <p>2. Select the document you want to hide</p>
+                    <p>3. Click "Hide Document" to create the stego image</p>
+                    <p>4. Download the modified image</p>
+                </div>
+
+                <form id="hideForm" onsubmit="handleHide(event)">
+                    <div id="hideMessage" class="message"></div>
+
+                    <div class="form-group">
+                        <label>Cover Image (PNG or BMP)</label>
+                        <div class="file-input-wrapper">
+                            <label for="hideImage" class="file-input-label">
+                                📁 Click to select image or drag & drop
+                            </label>
+                            <input type="file" id="hideImage" accept=".png,.bmp" required>
+                            <div id="hideImageName" class="file-name"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Document to Hide (any file)</label>
+                        <div class="file-input-wrapper">
+                            <label for="hideDocument" class="file-input-label">
+                                📁 Click to select document or drag & drop
+                            </label>
+                            <input type="file" id="hideDocument" required>
+                            <div id="hideDocName" class="file-name"></div>
+                        </div>
+                    </div>
+
+                    <div id="capacityInfo" class="capacity-info" style="display: none;">
+                        <div class="capacity-item">
+                            <div class="value" id="capacityValue">-</div>
+                            <div class="label">Max Capacity</div>
+                        </div>
+                        <div class="capacity-item">
+                            <div class="value" id="docSize">-</div>
+                            <div class="label">Document Size</div>
+                        </div>
+                    </div>
+
+                    <div class="loading" id="hideLoading">
+                        <div class="spinner"></div>
+                        <p>Processing...</p>
+                    </div>
+
+                    <button type="submit">🔐 Hide Document</button>
+                </form>
+            </div>
+
+            <!-- Extract Tab -->
+            <div id="extract" class="tab-content">
+                <div class="info-box">
+                    <h3>How to Extract</h3>
+                    <p>1. Select the image containing the hidden document</p>
+                    <p>2. Click "Extract Document" to reveal the hidden content</p>
+                    <p>3. Download the extracted document</p>
+                </div>
+
+                <form id="extractForm" onsubmit="handleExtract(event)">
+                    <div id="extractMessage" class="message"></div>
+
+                    <div class="form-group">
+                        <label>Image with Hidden Document</label>
+                        <div class="file-input-wrapper">
+                            <label for="extractImage" class="file-input-label">
+                                📁 Click to select image or drag & drop
+                            </label>
+                            <input type="file" id="extractImage" accept=".png,.bmp" required>
+                            <div id="extractImageName" class="file-name"></div>
+                        </div>
+                    </div>
+
+                    <div class="loading" id="extractLoading">
+                        <div class="spinner"></div>
+                        <p>Processing...</p>
+                    </div>
+
+                    <button type="submit">📂 Extract Document</button>
+                </form>
+            </div>
+
+            <!-- Info Tab -->
+            <div id="info" class="tab-content">
+                <div class="info-box">
+                    <h3>About LSB Steganography</h3>
+                    <p>Hide'nPNG uses Least Significant Bit (LSB) encoding to hide documents inside images.</p>
+                </div>
+
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">How It Works</h3>
+                <p style="margin-bottom: 15px;">
+                    Each pixel in an RGB image has three color channels (Red, Green, Blue). Each channel is stored as a number
+                    from 0-255. By modifying the least significant bit (the rightmost bit) of each channel, we can store one bit
+                    of information. Since these changes are imperceptible to the human eye, the image appears unchanged.
+                </p>
+
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">Image Capacity</h3>
+                <p style="margin-bottom: 15px;">
+                    The amount of data you can hide depends on the image size:
+                </p>
+                <ul style="margin-left: 20px; margin-bottom: 15px;">
+                    <li>100×100 image: ~3.7 KB</li>
+                    <li>500×500 image: ~93 KB</li>
+                    <li>1000×1000 image: ~372 KB</li>
+                </ul>
+
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">Supported Formats</h3>
+                <ul style="margin-left: 20px; margin-bottom: 15px;">
+                    <li><strong>PNG:</strong> Lossless format, recommended for steganography</li>
+                    <li><strong>BMP:</strong> Uncompressed format, also supports steganography</li>
+                </ul>
+
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">⚠️ Security Notes</h3>
+                <ul style="margin-left: 20px;">
+                    <li>LSB steganography is <strong>not encrypted</strong> - use encryption for sensitive data</li>
+                    <li>Avoid re-saving images in lossy formats (JPEG) as this destroys hidden data</li>
+                    <li>Statistical analysis can potentially detect the presence of hidden data</li>
+                    <li>For maximum security, encrypt your document before hiding it</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>Hide'nPNG - Steganography Tool | Secure Document Hiding in Images</p>
+        </footer>
+    </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tabName) {
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(c => c.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // File input handlers
+        document.getElementById('hideImage').addEventListener('change', function() {
+            updateFileName('hideImage', 'hideImageName');
+            checkCapacity();
+        });
+
+        document.getElementById('hideDocument').addEventListener('change', function() {
+            updateFileName('hideDocument', 'hideDocName');
+            updateDocSize();
+        });
+
+        document.getElementById('extractImage').addEventListener('change', function() {
+            updateFileName('extractImage', 'extractImageName');
+        });
+
+        function updateFileName(inputId, displayId) {
+            const input = document.getElementById(inputId);
+            const display = document.getElementById(displayId);
+            if (input.files.length > 0) {
+                display.textContent = '✓ ' + input.files[0].name;
+                display.classList.add('show');
+            } else {
+                display.classList.remove('show');
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function updateDocSize() {
+            const file = document.getElementById('hideDocument').files[0];
+            if (file) {
+                document.getElementById('docSize').textContent = formatBytes(file.size);
+            }
+        }
+
+        async function checkCapacity() {
+            const imageFile = document.getElementById('hideImage').files[0];
+            if (!imageFile) return;
+
+            const formData = new FormData();
+            formData.append('image', imageFile);
+
+            try {
+                const response = await fetch('/api/check-capacity', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('capacityValue').textContent = formatBytes(data.capacity);
+                    document.getElementById('capacityInfo').style.display = 'grid';
+                }
+            } catch (error) {
+                console.error('Error checking capacity:', error);
+            }
+        }
+
+        async function handleHide(event) {
+            event.preventDefault();
+
+            const hideMessage = document.getElementById('hideMessage');
+            const hideLoading = document.getElementById('hideLoading');
+            const hideForm = document.getElementById('hideForm');
+
+            hideMessage.className = 'message';
+            hideLoading.style.display = 'none';
+
+            const imageFile = document.getElementById('hideImage').files[0];
+            const docFile = document.getElementById('hideDocument').files[0];
+
+            if (!imageFile || !docFile) {
+                showMessage('hideMessage', 'Please select both image and document', 'error');
+                return;
+            }
+
+            hideLoading.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            formData.append('document', docFile);
+
+            try {
+                const response = await fetch('/api/hide', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    hideMessage.className = 'message success';
+                    hideMessage.textContent = '✓ Document hidden successfully! Download will start...';
+                    
+                    // Download file
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = imageFile.name.replace(/\.[^.]+$/, '_hidden' + imageFile.name.match(/\.[^.]+$/)[0]);
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    hideForm.reset();
+                    document.getElementById('hideImageName').classList.remove('show');
+                    document.getElementById('hideDocName').classList.remove('show');
+                } else {
+                    const error = await response.json();
+                    showMessage('hideMessage', 'Error: ' + error.error, 'error');
+                }
+            } catch (error) {
+                showMessage('hideMessage', 'Error: ' + error.message, 'error');
+            } finally {
+                hideLoading.style.display = 'none';
+            }
+        }
+
+        async function handleExtract(event) {
+            event.preventDefault();
+
+            const extractMessage = document.getElementById('extractMessage');
+            const extractLoading = document.getElementById('extractLoading');
+            const extractForm = document.getElementById('extractForm');
+
+            extractMessage.className = 'message';
+            extractLoading.style.display = 'none';
+
+            const imageFile = document.getElementById('extractImage').files[0];
+
+            if (!imageFile) {
+                showMessage('extractMessage', 'Please select an image', 'error');
+                return;
+            }
+
+            extractLoading.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('image', imageFile);
+
+            try {
+                const response = await fetch('/api/extract', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    showMessage('extractMessage', '✓ Document extracted successfully! Download will start...', 'success');
+                    
+                    // Download file
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'extracted_document';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    extractForm.reset();
+                    document.getElementById('extractImageName').classList.remove('show');
+                } else {
+                    const error = await response.json();
+                    showMessage('extractMessage', 'Error: ' + error.error, 'error');
+                }
+            } catch (error) {
+                showMessage('extractMessage', 'Error: ' + error.message, 'error');
+            } finally {
+                extractLoading.style.display = 'none';
+            }
+        }
+
+        function showMessage(elementId, text, type) {
+            const element = document.getElementById(elementId);
+            element.className = 'message ' + type;
+            element.textContent = text;
+        }
+
+        // Drag and drop functionality
+        function setupDragDrop(inputId) {
+            const input = document.getElementById(inputId);
+            const label = input.parentElement.querySelector('.file-input-label');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                label.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                label.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                label.addEventListener(eventName, unhighlight, false);
+            });
+
+            label.addEventListener('drop', handleDrop.bind(null, input), false);
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight(e) {
+                label.style.background = '#667eea';
+                label.style.color = 'white';
+            }
+
+            function unhighlight(e) {
+                label.style.background = '';
+                label.style.color = '';
+            }
+
+            function handleDrop(input, e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                input.files = files;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        setupDragDrop('hideImage');
+        setupDragDrop('hideDocument');
+        setupDragDrop('extractImage');
+    </script>
+</body>
+</html>
