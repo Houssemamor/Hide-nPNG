@@ -139,3 +139,19 @@ uploads/
 extracted_*
 *_hidden.*
 test_images/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+
+# GitHub Actions
+.github/cache/
+CI_CD_COMPLETE_SUMMARY.md
+CONTRIBUTING.md
+GITHUB_ACTIONS_QUICK_START.md
+GITHUB_ACTIONS_SETUP.md
+IMPLEMENTATION_SUMMARY.md
+QUICK_REFERENCE.md

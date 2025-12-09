@@ -1,0 +1,121 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hide-npng"
+version = "1.0.0"
+description = "Hide secret documents in PNG/BMP images using LSB steganography"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Houssem Amor", email = "houssem.amor.02@gmail.com"}
+]
+keywords = ["steganography", "lsb", "image", "security", "png", "bmp"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Security :: Cryptography",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "Pillow>=9.0.0",
+    "numpy>=1.21.0",
+    "Flask>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov>=2.0",
+    "black>=22.0",
+    "flake8>=4.0",
+    "pylint>=2.0",
+    "isort>=5.0",
+]
+web = [
+    "Flask>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Houssemamor/Hide-nPNG"
+Documentation = "https://github.com/Houssemamor/Hide-nPNG#readme"
+Repository = "https://github.com/Houssemamor/Hide-nPNG.git"
+"Bug Tracker" = "https://github.com/Houssemamor/Hide-nPNG/issues"
+
+[project.scripts]
+hide-npng = "main:main"
+
+[tool.black]
+line-length = 120
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_mode = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 120
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-v --strict-markers --cov=. --cov-report=html --cov-report=term-missing"
+testpaths = ["test_steganography.py"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "*/site-packages/*",
+    "*/distutils/*",
+    "*/tests/*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if False:",
+]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+    "R0913",  # too-many-arguments
+]
+
+[tool.pylint.format]
+max-line-length = 120
