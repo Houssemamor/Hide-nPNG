@@ -91,12 +91,14 @@ python_classes = "Test*"
 python_functions = "test_*"
 
 [tool.coverage.run]
-source = ["."]
+source = ["steganography", "image_handler", "config"]
 omit = [
     "*/site-packages/*",
     "*/distutils/*",
     "*/tests/*",
     "setup.py",
+    "main.py",
+    "app.py",
 ]
 
 [tool.coverage.report]
