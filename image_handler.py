@@ -32,11 +32,13 @@ def load_image(image_path):
     if ext not in SUPPORTED_FORMATS:
         raise ValueError(ERROR_INVALID_FORMAT)
     
-    # Load image and convert to RGB
-    image = Image.open(image_path)
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
-    
+    # Load image and convert to RGB while ensuring the file handle closes on Windows
+    with Image.open(image_path) as loaded_image:
+        if loaded_image.mode != 'RGB':
+            image = loaded_image.convert('RGB')
+        else:
+            image = loaded_image.copy()
+
     return image
 
 

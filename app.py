@@ -3,7 +3,7 @@ Flask web application for the steganography tool.
 Provides a graphical interface for hiding and extracting documents from images.
 """
 
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, jsonify, after_this_request
 import os
 import tempfile
 from werkzeug.utils import secure_filename
@@ -47,24 +47,35 @@ def check_capacity():
         if not allowed_file(file.filename, ALLOWED_EXTENSIONS):
             return jsonify({'error': 'Invalid image format. Use PNG or BMP.'}), 400
         
-        # Save temporarily
-        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
-        file.save(temp_path)
-        
-        # Load image and get capacity
-        image = load_image(temp_path)
-        capacity = get_image_capacity_bytes(image)
-        width, height = image.size
-        
-        # Clean up
-        os.remove(temp_path)
-        
-        return jsonify({
-            'capacity': capacity,
-            'width': width,
-            'height': height,
-            'total_pixels': width * height
-        }), 200
+        # Save temporarily using a unique file name to avoid Windows file locks
+        suffix = os.path.splitext(file.filename)[1]
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, dir=app.config['UPLOAD_FOLDER'], suffix=suffix) as temp_file:
+                temp_path = temp_file.name
+            file.save(temp_path)
+
+            # Load image and get capacity
+            image = load_image(temp_path)
+            capacity = get_image_capacity_bytes(image)
+            width, height = image.size
+
+            # Explicitly close the in-memory image copy
+            image.close()
+
+            return jsonify({
+                'capacity': capacity,
+                'width': width,
+                'height': height,
+                'total_pixels': width * height
+            }), 200
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except PermissionError:
+                    # If Windows still holds the file briefly, it will be cleaned up later
+                    pass
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -86,35 +97,60 @@ def hide():
         if not allowed_file(image_file.filename, ALLOWED_EXTENSIONS):
             return jsonify({'error': 'Invalid image format. Use PNG or BMP.'}), 400
         
-        # Save files temporarily
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image_file.filename))
-        doc_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(doc_file.filename))
-        image_file.save(image_path)
-        doc_file.save(doc_path)
-        
-        # Load image and document
-        image = load_image(image_path)
-        with open(doc_path, 'rb') as f:
-            message = f.read()
-        
-        # Extract file extension for restoration on extraction
-        doc_extension = os.path.splitext(doc_file.filename)[1].lstrip('.')
-        
-        # Encode message with extension
-        modified_image = encode_message(message, image, file_extension=doc_extension if doc_extension else None)
-        
-        # Save output
-        output_filename = os.path.splitext(image_file.filename)[0] + '_hidden' + \
-                         os.path.splitext(image_file.filename)[1]
-        output_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(output_filename))
-        save_image(modified_image, output_path)
-        
-        # Clean up input files
-        os.remove(image_path)
-        os.remove(doc_path)
-        
-        # Return the modified image
-        return send_file(output_path, as_attachment=True, download_name=output_filename)
+        image_path = None
+        doc_path = None
+        output_path = None
+
+        try:
+            # Save files temporarily using unique names to avoid conflicts
+            image_suffix = os.path.splitext(image_file.filename)[1]
+            doc_suffix = os.path.splitext(doc_file.filename)[1]
+
+            with tempfile.NamedTemporaryFile(delete=False, dir=app.config['UPLOAD_FOLDER'], suffix=image_suffix) as temp_image:
+                image_path = temp_image.name
+            with tempfile.NamedTemporaryFile(delete=False, dir=app.config['UPLOAD_FOLDER'], suffix=doc_suffix) as temp_doc:
+                doc_path = temp_doc.name
+
+            image_file.save(image_path)
+            doc_file.save(doc_path)
+
+            # Load image and document
+            image = load_image(image_path)
+            with open(doc_path, 'rb') as f:
+                message = f.read()
+
+            # Extract file extension for restoration on extraction
+            doc_extension = os.path.splitext(doc_file.filename)[1].lstrip('.')
+
+            # Encode message with extension
+            modified_image = encode_message(message, image, file_extension=doc_extension if doc_extension else None)
+
+            # Save output
+            output_filename = os.path.splitext(image_file.filename)[0] + '_hidden' + \
+                             os.path.splitext(image_file.filename)[1]
+            output_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(output_filename))
+            save_image(modified_image, output_path)
+            modified_image.close()
+
+            @after_this_request
+            def remove_output_file(response):
+                if output_path and os.path.exists(output_path):
+                    try:
+                        os.remove(output_path)
+                    except PermissionError:
+                        pass
+                return response
+
+            # Return the modified image
+            return send_file(output_path, as_attachment=True, download_name=output_filename)
+        finally:
+            # Clean up temporary files
+            for path in (image_path, doc_path):
+                if path and os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except PermissionError:
+                        pass
         
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
