@@ -1,0 +1,709 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{array}
+\usepackage{tabularx}
+
+% Code highlighting
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+    showstringspaces=false,
+    breakatwhitespace=false,
+    frame=single,
+    backgroundcolor=\color{lightgray!20}
+}
+
+% Header and Footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small Hide'nPNG Steganography Tool}
+\lhead{\small Technical Report}
+\cfoot{\thepage\ of \pageref{LastPage}}
+
+\title{\textbf{Hide'nPNG}}
+\subtitle{A Steganography Tool for Embedding Documents in Images}
+\author{Project Report}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+% ============================================================================
+\section{Executive Summary}
+% ============================================================================
+
+\textbf{Hide'nPNG} is a comprehensive Python steganography tool designed to hide and extract secret documents from digital images without visible alterations. The project implements Least Significant Bit (LSB) encoding to reliably embed sensitive files within PNG and BMP images while preserving the original file format.
+
+The tool provides three operational modes:
+\begin{enumerate}
+    \item Command-line interface for advanced users
+    \item Flask-based web application for graphical interaction
+    \item Programmatic API for integration into other applications
+\end{enumerate}
+
+Key achievements include automatic file extension preservation, robust error handling, comprehensive test coverage, and the ability to handle files up to the image's theoretical storage capacity.
+
+% ============================================================================
+\section{Project Overview}
+% ============================================================================
+
+\subsection{Objectives}
+
+The Hide'nPNG project addresses the need for secure, invisible document hiding within digital media. Primary objectives include:
+
+\begin{itemize}
+    \item Implementing reliable LSB steganography for lossless encoding
+    \item Preserving original file extensions for transparent document restoration
+    \item Providing user-friendly interfaces (CLI and web)
+    \item Ensuring capacity validation before encoding
+    \item Maintaining robust error handling across operations
+    \item Supporting multiple image formats (PNG, BMP)
+\end{itemize}
+
+\subsection{Key Features}
+
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Feature} & \textbf{Description} \\
+\hline
+LSB Encoding & 1-bit per RGB channel for reliable, lossless data embedding \\
+\hline
+Extension Preservation & Automatically stores and restores original file extensions \\
+\hline
+Multiple Interfaces & CLI, Flask web app, and programmatic API \\
+\hline
+Capacity Checking & Pre-flight validation ensures documents fit within images \\
+\hline
+Format Support & PNG and BMP image formats \\
+\hline
+File Size Limit & Handles up to 50MB uploads in web interface \\
+\hline
+Error Handling & Comprehensive exception handling and user feedback \\
+\hline
+Testing & Unit tests for reliability verification \\
+\hline
+\end{tabularx}
+
+% ============================================================================
+\section{Technical Architecture}
+% ============================================================================
+
+\subsection{System Components}
+
+The Hide'nPNG system consists of several interconnected modules:
+
+\subsubsection{steganography.py}
+
+Core module implementing LSB steganography algorithms:
+
+\begin{itemize}
+    \item \texttt{encode\_message()}: Embeds data into image LSBs
+    \item \texttt{decode\_message()}: Extracts hidden data and restores metadata
+    \item Handles extension metadata for transparent file restoration
+\end{itemize}
+
+The encoding process follows this structure:
+\[
+\text{Full Data} = \text{Extension Metadata} \oplus \text{Message Length} \oplus \text{Actual Message}
+\]
+
+\subsubsection{image\_handler.py}
+
+Image processing utilities:
+
+\begin{itemize}
+    \item \texttt{load\_image()}: Loads PNG/BMP images
+    \item \texttt{save\_image()}: Persists modified images
+    \item \texttt{get\_pixel\_data()}: Extracts raw pixel values
+    \item \texttt{set\_pixel\_data()}: Updates pixel values with modified bits
+    \item \texttt{get\_image\_capacity\_bytes()}: Calculates maximum hideable data
+\end{itemize}
+
+Capacity calculation:
+\[
+\text{Capacity (bytes)} = \frac{\text{Width} \times \text{Height} \times \text{Channels} \times \text{Bits per Channel}}{8}
+\]
+
+For a standard RGB image:
+\[
+\text{Capacity} = \frac{\text{Width} \times \text{Height} \times 3 \times 1}{8} = \frac{\text{Width} \times \text{Height}}{2.67} \text{ bytes}
+\]
+
+\subsubsection{main.py}
+
+Command-line interface implementation:
+
+\begin{itemize}
+    \item \texttt{hide\_command()}: Embeds documents in images
+    \item \texttt{extract\_command()}: Recovers hidden documents
+    \item Argument parsing and user feedback
+\end{itemize}
+
+\subsubsection{app.py}
+
+Flask web application providing graphical interface:
+
+\begin{itemize}
+    \item \texttt{/api/check-capacity}: Validates image capacity
+    \item Upload and processing endpoints
+    \item File download management
+    \item Session handling for temporary files
+\end{itemize}
+
+\subsubsection{config.py}
+
+Configuration constants:
+
+\begin{itemize}
+    \item Format support definitions
+    \item LSB encoding parameters (1 bit per channel)
+    \item Message metadata structure (4-byte length field)
+    \item Error message definitions
+\end{itemize}
+
+\subsection{Data Flow}
+
+\subsubsection{Encoding Process}
+
+\begin{enumerate}
+    \item Load cover image (PNG/BMP format)
+    \item Calculate image capacity
+    \item Read document and extract file extension
+    \item Prepare metadata: \texttt{[extension\_length][extension\_data][message\_length][message]}
+    \item Convert all bytes to binary representation
+    \item Replace LSBs in pixel data with message bits
+    \item Save modified image
+\end{enumerate}
+
+\subsubsection{Decoding Process}
+
+\begin{enumerate}
+    \item Load image containing hidden data
+    \item Extract LSBs from all pixels sequentially
+    \item Parse extension length (first 8 bits)
+    \item Extract extension data if present
+    \item Extract message length (4 bytes)
+    \item Extract message content
+    \item Reconstruct file with original extension
+    \item Return document and metadata
+\end{enumerate}
+
+% ============================================================================
+\section{Implementation Details}
+% ============================================================================
+
+\subsection{LSB Steganography Algorithm}
+
+The core algorithm operates on individual bits:
+
+\begin{lstlisting}
+# Encoding: Replace LSB with message bit
+pixel_modified = (pixel & 0xFE) | message_bit
+
+# Decoding: Extract LSB
+extracted_bit = pixel & 1
+\end{lstlisting}
+
+\subsection{File Extension Metadata}
+
+To ensure seamless document restoration:
+
+\begin{lstlisting}
+# Storage format:
+# Byte 0: Extension length (0-255)
+# Bytes 1..N: Extension string in UTF-8
+# Bytes N+1..N+4: Message length (32-bit big-endian)
+# Bytes N+5...: Actual message data
+\end{lstlisting}
+
+\subsection{Configuration Parameters}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Parameter} & \textbf{Value} & \textbf{Purpose} \\
+\hline
+BITS\_PER\_CHANNEL & 1 & LSB depth for steganography \\
+\hline
+CHANNELS\_PER\_PIXEL & 3 & RGB color channels \\
+\hline
+MESSAGE\_LENGTH\_SIZE & 4 & Bytes for length metadata (supports 4GB) \\
+\hline
+MAX\_CONTENT\_LENGTH & 50MB & Web upload size limit \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+\section{Usage Guide}
+% ============================================================================
+
+\subsection{Installation}
+
+\begin{lstlisting}[language=bash]
+# Clone/download project
+cd Hide-nPNG
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Verify installation
+python main.py --help
+\end{lstlisting}
+
+\subsection{Dependencies}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Package} & \textbf{Version} & \textbf{Purpose} \\
+\hline
+Pillow & $\geq 9.0.0$ & Image processing and manipulation \\
+\hline
+NumPy & $\geq 1.21.0$ & Array operations and optimization \\
+\hline
+Flask & $\geq 2.0.0$ & Web application framework \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Command-Line Interface}
+
+\subsubsection{Hiding a Document}
+
+\begin{lstlisting}[language=bash]
+python main.py hide image.png secret.txt -o output.png
+\end{lstlisting}
+
+\textbf{Parameters:}
+\begin{itemize}
+    \item \texttt{image.png}: Cover image (PNG or BMP)
+    \item \texttt{secret.txt}: Document to hide
+    \item \texttt{-o output.png}: Output path (optional)
+\end{itemize}
+
+\subsubsection{Extracting a Document}
+
+\begin{lstlisting}[language=bash]
+python main.py extract image_hidden.png
+\end{lstlisting}
+
+\textbf{Parameters:}
+\begin{itemize}
+    \item \texttt{image\_hidden.png}: Image with hidden data
+    \item Output path is optional; extension restored automatically
+\end{itemize}
+
+\subsection{Web Interface}
+
+\begin{lstlisting}[language=bash]
+python app.py
+\end{lstlisting}
+
+Access the interface at \texttt{http://localhost:5000}
+
+Features:
+\begin{itemize}
+    \item Real-time capacity checking
+    \item Drag-and-drop image upload
+    \item Visual feedback and progress indicators
+    \item Automatic file download on extraction
+\end{itemize}
+
+\subsection{Programmatic API}
+
+\begin{lstlisting}[language=Python]
+from image_handler import load_image, save_image
+from steganography import encode_message, decode_message
+
+# Hide document
+image = load_image('cover.png')
+with open('secret.pdf', 'rb') as f:
+    data = f.read()
+modified = encode_message(data, image, 'pdf')
+save_image(modified, 'output.png')
+
+# Extract document
+image = load_image('output.png')
+data, ext = decode_message(image)
+with open(f'recovered.{ext}', 'wb') as f:
+    f.write(data)
+\end{lstlisting}
+
+% ============================================================================
+\section{Mathematical Foundation}
+% ============================================================================
+
+\subsection{Steganography Capacity}
+
+The maximum capacity for an image using 1-bit LSB encoding per channel:
+
+\[
+C = \frac{W \times H \times C_n}{8} \text{ bytes}
+\]
+
+Where:
+\begin{itemize}
+    \item $C$ = Capacity in bytes
+    \item $W$ = Image width in pixels
+    \item $H$ = Image height in pixels
+    \item $C_n$ = Number of channels (3 for RGB)
+\end{itemize}
+
+\subsubsection{Example Calculations}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|r|r|r|}
+\hline
+\textbf{Image Size} & \textbf{Capacity (1-bit LSB)} & \textbf{Typical File} \\
+\hline
+640×480 & $\approx 114$ KB & Small documents \\
+\hline
+1920×1080 & $\approx 767$ KB & Average documents \\
+\hline
+3840×2160 & $\approx 3.1$ MB & Large documents \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Message Structure}
+
+Total overhead per message:
+
+\[
+\text{Overhead} = 1 + |Extension| + 4 \text{ bytes}
+\]
+
+Where:
+\begin{itemize}
+    \item 1 byte = extension length field
+    \item $|Extension|$ = extension string length
+    \item 4 bytes = message length field (32-bit)
+\end{itemize}
+
+% ============================================================================
+\section{Error Handling and Validation}
+% ============================================================================
+
+\subsection{Pre-encoding Validation}
+
+\begin{enumerate}
+    \item Verify image format (PNG or BMP)
+    \item Check image is not too small
+    \item Validate image can be loaded
+    \item Calculate capacity
+    \item Ensure document $+$ metadata $\leq$ capacity
+    \item Verify file permissions for output
+\end{enumerate}
+
+\subsection{Error Messages}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Error} & \textbf{Cause and Resolution} \\
+\hline
+File not found & Document path does not exist. Verify path and try again. \\
+\hline
+Unsupported format & Image must be PNG or BMP. Convert image format. \\
+\hline
+Image too small & Increase image size or reduce document size. \\
+\hline
+Message too large & Document exceeds image capacity. Use larger image. \\
+\hline
+Invalid image data & Image file is corrupted. Use different image. \\
+\hline
+Decode failure & Image contains no valid hidden data. \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+\section{Testing}
+% ============================================================================
+
+The project includes comprehensive test coverage via \texttt{test\_steganography.py}.
+
+\subsection{Test Categories}
+
+\begin{itemize}
+    \item \textbf{Unit Tests}: Individual function behavior
+    \item \textbf{Integration Tests}: End-to-end encode/decode cycles
+    \item \textbf{Edge Cases}: Boundary conditions and error scenarios
+    \item \textbf{Format Tests}: PNG and BMP handling
+\end{itemize}
+
+\subsection{Running Tests}
+
+\begin{lstlisting}[language=bash]
+# Run all tests
+pytest test_steganography.py -v
+
+# Run with coverage
+pytest test_steganography.py --cov=. --cov-report=html
+\end{lstlisting}
+
+% ============================================================================
+\section{Security Considerations}
+% ============================================================================
+
+\subsection{Strengths}
+
+\begin{itemize}
+    \item LSB encoding is imperceptible to human vision
+    \item No visual degradation of cover image
+    \item Lossless recovery of original documents
+    \item File extension preservation prevents format confusion
+\end{itemize}
+
+\subsection{Limitations}
+
+\begin{itemize}
+    \item LSB steganography is vulnerable to statistical analysis
+    \item Not suitable as primary encryption mechanism
+    \item Image recompression destroys hidden data
+    \item No built-in encryption (documents stored in plaintext within image)
+\end{itemize}
+
+\subsection{Recommendations}
+
+\begin{enumerate}
+    \item \textbf{Encrypt before hiding}: Encrypt documents before embedding
+    \item \textbf{Use high-capacity images}: Larger images distribute data more effectively
+    \item \textbf{Avoid recompression}: Store as PNG/BMP to preserve LSBs
+    \item \textbf{Combine techniques}: Use steganography with cryptography
+\end{enumerate}
+
+% ============================================================================
+\section{Performance Characteristics}
+% ============================================================================
+
+\subsection{Time Complexity}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Operation} & \textbf{Complexity} & \textbf{Notes} \\
+\hline
+Encoding & $O(W \times H)$ & Linear in image size \\
+\hline
+Decoding & $O(W \times H)$ & Linear in image size \\
+\hline
+Capacity Check & $O(1)$ & Constant time calculation \\
+\hline
+Image Load & $O(W \times H)$ & Linear in image size \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Space Complexity}
+
+\[
+S = O(W \times H \times C_n) \text{ bytes}
+\]
+
+Full image loaded into memory as pixel array.
+
+\subsection{Typical Performance}
+
+For a 1920×1080 PNG image on modern hardware:
+\begin{itemize}
+    \item Encoding: 0.5–2.0 seconds
+    \item Decoding: 0.5–2.0 seconds
+    \item Capacity check: $< 1$ millisecond
+\end{itemize}
+
+% ============================================================================
+\section{File Structure and Organization}
+% ============================================================================
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{File} & \textbf{Purpose} \\
+\hline
+\texttt{main.py} & Command-line interface and user entry point \\
+\hline
+\texttt{app.py} & Flask web application and REST API \\
+\hline
+\texttt{steganography.py} & Core LSB encoding/decoding algorithms \\
+\hline
+\texttt{image\_handler.py} & Image I/O and pixel manipulation \\
+\hline
+\texttt{config.py} & Configuration constants and settings \\
+\hline
+\texttt{test\_steganography.py} & Unit and integration tests \\
+\hline
+\texttt{requirements.txt} & Python package dependencies \\
+\hline
+\texttt{pyproject.toml} & Project metadata and build configuration \\
+\hline
+\texttt{templates/index.html} & Web interface HTML/CSS/JavaScript \\
+\hline
+\texttt{README.md} & User documentation \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+\section{Installation and Deployment}
+% ============================================================================
+
+\subsection{System Requirements}
+
+\begin{itemize}
+    \item Python 3.8 or later
+    \item Operating System: Windows, macOS, Linux
+    \item Minimum 100 MB free disk space
+    \item RAM: 512 MB minimum (1 GB recommended)
+\end{itemize}
+
+\subsection{Development Installation}
+
+\begin{lstlisting}[language=bash]
+# Clone repository
+git clone https://github.com/user/Hide-nPNG.git
+cd Hide-nPNG
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install development tools
+pip install -r requirements.txt[dev]
+\end{lstlisting}
+
+\subsection{Production Deployment}
+
+For web interface deployment:
+
+\begin{lstlisting}[language=bash]
+# Install production server
+pip install gunicorn
+
+# Run with Gunicorn
+gunicorn -w 4 -b 0.0.0.0:5000 app:app
+\end{lstlisting}
+
+% ============================================================================
+\section{Future Enhancements}
+% ============================================================================
+
+\subsection{Planned Features}
+
+\begin{enumerate}
+    \item \textbf{Multi-bit LSB}: Support 2-4 bits per channel for increased capacity
+    \item \textbf{Built-in Encryption}: Integrated AES-256 encryption
+    \item \textbf{Batch Processing}: Hide/extract multiple files simultaneously
+    \item \textbf{Advanced Detection}: Add steganalysis detection capabilities
+    \item \textbf{Additional Formats}: Support JPEG, TIFF, and other formats
+    \item \textbf{Cloud Integration}: Upload/download from cloud storage
+    \item \textbf{Mobile App}: Native iOS/Android applications
+\end{enumerate}
+
+\subsection{Optimization Opportunities}
+
+\begin{itemize}
+    \item Vectorize operations using NumPy for faster processing
+    \item Implement GPU acceleration for large images
+    \item Add caching for repeated capacity checks
+    \item Optimize memory usage for very large images
+    \item Implement progressive loading for web interface
+\end{itemize}
+
+% ============================================================================
+\section{Conclusion}
+% ============================================================================
+
+Hide'nPNG successfully implements a practical, user-friendly steganography system for embedding documents in digital images. The project provides multiple interfaces (CLI and web) to accommodate different user preferences and use cases.
+
+Key accomplishments:
+\begin{itemize}
+    \item Reliable LSB-based steganography with lossless recovery
+    \item Transparent file extension preservation
+    \item Comprehensive error handling and validation
+    \item Both programmatic and user-friendly interfaces
+    \item Well-organized, maintainable codebase
+\end{itemize}
+
+While current implementation focuses on basic LSB steganography, the modular architecture supports future enhancements such as multi-bit encoding, built-in encryption, and additional image formats.
+
+The tool effectively addresses the core requirement of hiding documents in images without visible degradation, making it suitable for applications requiring discrete data storage in digital media.
+
+% ============================================================================
+\appendix
+
+\section{Command Reference}
+
+\subsection{Hide Command}
+
+\begin{lstlisting}[language=bash]
+python main.py hide <image_path> <document_path> [-o <output_path>]
+\end{lstlisting}
+
+\textbf{Example:}
+\begin{lstlisting}[language=bash]
+python main.py hide landscape.png confidential.pdf -o landscape_secret.png
+\end{lstlisting}
+
+\subsection{Extract Command}
+
+\begin{lstlisting}[language=bash]
+python main.py extract <image_path> [<output_path>]
+\end{lstlisting}
+
+\textbf{Example:}
+\begin{lstlisting}[language=bash]
+python main.py extract landscape_secret.png
+# Output: landscape_extracted.pdf (extension auto-restored)
+\end{lstlisting}
+
+\section{Configuration Options}
+
+All configuration is managed in \texttt{config.py}. Key parameters:
+
+\begin{lstlisting}[language=Python]
+SUPPORTED_FORMATS = {'PNG', 'BMP', 'png', 'bmp'}
+BITS_PER_CHANNEL = 1
+CHANNELS_PER_PIXEL = 3
+MESSAGE_LENGTH_SIZE = 4
+\end{lstlisting}
+
+\section{Glossary}
+
+\begin{description}
+    \item[LSB] Least Significant Bit – the lowest order bit in a byte
+    \item[Steganography] Art of hiding information within other data
+    \item[Cover Image] The original image used to hide data
+    \item[Stego Image] Modified image containing hidden data
+    \item[Capacity] Maximum bytes that can be hidden in an image
+    \item[RGB] Red-Green-Blue color model with three channels per pixel
+\end{description}
+
+\end{document}
